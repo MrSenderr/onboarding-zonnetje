@@ -165,6 +165,11 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
           <input type="text" id="woonplaats" placeholder="Amsterdam">
         </div>
       </div>
+      <div class="fg" style="margin-top:.75rem;margin-bottom:0">
+        <label for="geboorteplaats">Geboorteplaats<span class="req">*</span></label>
+        <input type="text" id="geboorteplaats" placeholder="Bijv. Amsterdam" autocomplete="off">
+        <span style="font-size:.8rem;color:var(--t3)">Staat op je identiteitsbewijs of paspoort</span>
+      </div>
     </div>
 
     <!-- BSN & IBAN -->
@@ -343,6 +348,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     huisnummer:       val('huisnummer'),
     postcode:         val('postcode'),
     woonplaats:       val('woonplaats'),
+    geboorteplaats:   val('geboorteplaats'),
     bsn:              val('bsn').replace(/\D/g,''),
     iban:             fmtIban(val('iban')),
     noodcontact_naam: val('noodcontact-naam'),
@@ -360,6 +366,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
   if (!mark('huisnummer',       !!fields.huisnummer))       errors.push('Huisnummer is verplicht');
   if (!mark('postcode',         !!fields.postcode))         errors.push('Postcode is verplicht');
   if (!mark('woonplaats',       !!fields.woonplaats))       errors.push('Woonplaats is verplicht');
+  if (!mark('geboorteplaats',   !!fields.geboorteplaats))   errors.push('Geboorteplaats is verplicht');
   if (!mark('bsn',              validBsn(fields.bsn)))      errors.push('BSN is ongeldig (moet 9 cijfers zijn en de 11-proef doorstaan)');
   if (!mark('iban',             validIban(fields.iban)))    errors.push('IBAN is ongeldig');
   if (!mark('noodcontact-naam', !!fields.noodcontact_naam)) errors.push('Naam noodcontact is verplicht');
