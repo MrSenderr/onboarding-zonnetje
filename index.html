@@ -159,6 +159,17 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
           <input type="tel" id="telefoonnummer" placeholder="06-..." inputmode="tel" autocomplete="tel">
         </div>
       </div>
+      <div class="row2" style="margin-top:.75rem">
+        <div class="fg" style="margin-bottom:0">
+          <label for="geboortedatum">Geboortedatum<span class="req">*</span></label>
+          <input type="date" id="geboortedatum" autocomplete="bday">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label for="geboorteplaats">Geboorteplaats<span class="req">*</span></label>
+          <input type="text" id="geboorteplaats" placeholder="Bijv. Amsterdam" autocomplete="off">
+          <span style="font-size:.8rem;color:var(--t3)">Staat op je identiteitsbewijs</span>
+        </div>
+      </div>
     </div>
 
     <!-- Adres -->
@@ -183,11 +194,6 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
           <label for="woonplaats">Woonplaats<span class="req">*</span></label>
           <input type="text" id="woonplaats" placeholder="Amsterdam">
         </div>
-      </div>
-      <div class="fg" style="margin-top:.75rem;margin-bottom:0">
-        <label for="geboorteplaats">Geboorteplaats<span class="req">*</span></label>
-        <input type="text" id="geboorteplaats" placeholder="Bijv. Amsterdam" autocomplete="off">
-        <span style="font-size:.8rem;color:var(--t3)">Staat op je identiteitsbewijs of paspoort</span>
       </div>
     </div>
 
@@ -240,9 +246,9 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
       </div>
     </div>
 
-    <!-- T-shirt maat -->
+    <!-- Bovenkleding maat -->
     <div class="card">
-      <div class="card-title">👕 T-shirt maat</div>
+      <div class="card-title">👕 Bovenkleding maat</div>
       <div class="fg" style="margin-bottom:0">
         <label>Kies je maat<span class="req">*</span></label>
         <div class="maat-row">
@@ -336,6 +342,7 @@ async function init() {
     if (data.achternaam)     document.getElementById('achternaam').value = data.achternaam;
     if (data.email)          document.getElementById('email').value = data.email;
     if (data.telefoonnummer) document.getElementById('telefoonnummer').value = data.telefoonnummer;
+    if (data.geboortedatum)  document.getElementById('geboortedatum').value = data.geboortedatum;
 
     showState(null); // toon formulier
     document.getElementById('form-area').style.display = '';
@@ -359,6 +366,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     achternaam:       val('achternaam'),
     email:            val('email'),
     telefoonnummer:   val('telefoonnummer'),
+    geboortedatum:    val('geboortedatum'),
     straat:           val('straat'),
     huisnummer:       val('huisnummer'),
     postcode:         val('postcode'),
@@ -380,11 +388,12 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
   if (!mark('voornaam',         !!fields.voornaam))         errors.push('Voornaam is verplicht');
   if (!mark('achternaam',       !!fields.achternaam))       errors.push('Achternaam is verplicht');
   if (!mark('email',            !!fields.email))            errors.push('E-mailadres is verplicht');
+  if (!mark('geboortedatum',    !!fields.geboortedatum))    errors.push('Geboortedatum is verplicht');
+  if (!mark('geboorteplaats',   !!fields.geboorteplaats))   errors.push('Geboorteplaats is verplicht');
   if (!mark('straat',           !!fields.straat))           errors.push('Straat is verplicht');
   if (!mark('huisnummer',       !!fields.huisnummer))       errors.push('Huisnummer is verplicht');
   if (!mark('postcode',         !!fields.postcode))         errors.push('Postcode is verplicht');
   if (!mark('woonplaats',       !!fields.woonplaats))       errors.push('Woonplaats is verplicht');
-  if (!mark('geboorteplaats',   !!fields.geboorteplaats))   errors.push('Geboorteplaats is verplicht');
   if (!mark('bsn',              validBsn(fields.bsn)))      errors.push('BSN is ongeldig (moet 9 cijfers zijn en de 11-proef doorstaan)');
   if (!mark('iban',             validIban(fields.iban)))    errors.push('IBAN is ongeldig');
   if (!mark('noodcontact-naam', !!fields.noodcontact_naam)) errors.push('Naam noodcontact is verplicht');
