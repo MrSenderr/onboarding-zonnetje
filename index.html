@@ -134,13 +134,32 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
 <!-- FORMULIER -->
 <div id="form-area" class="main" style="display:none">
 
-  <div id="prefill-banner" class="prefill-banner" style="display:none">
-    <strong>👋 Welkom, <span id="banner-naam"></span>!</strong>
-    We hebben de volgende gegevens al van je:
-    <div class="prefill-row" id="banner-items"></div>
-  </div>
-
   <form id="onboarding-form" novalidate>
+
+    <!-- Persoonsgegevens -->
+    <div class="card">
+      <div class="card-title">👤 Jouw gegevens</div>
+      <div class="row2">
+        <div class="fg" style="margin-bottom:0">
+          <label for="voornaam">Voornaam<span class="req">*</span></label>
+          <input type="text" id="voornaam" placeholder="Voornaam" autocomplete="given-name">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label for="achternaam">Achternaam<span class="req">*</span></label>
+          <input type="text" id="achternaam" placeholder="Achternaam" autocomplete="family-name">
+        </div>
+      </div>
+      <div class="row2" style="margin-top:.75rem">
+        <div class="fg" style="margin-bottom:0">
+          <label for="email">E-mailadres<span class="req">*</span></label>
+          <input type="email" id="email" placeholder="naam@email.nl" autocomplete="email">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label for="telefoonnummer">Telefoonnummer</label>
+          <input type="tel" id="telefoonnummer" placeholder="06-..." inputmode="tel" autocomplete="tel">
+        </div>
+      </div>
+    </div>
 
     <!-- Adres -->
     <div class="card">
@@ -312,19 +331,11 @@ async function init() {
       showState('error-state'); return;
     }
 
-    // Toon pre-fill banner
-    const naam = `${data.voornaam} ${data.achternaam}`;
-    document.getElementById('banner-naam').textContent = data.voornaam;
-    const items = [];
-    if (data.voornaam || data.achternaam) items.push(`👤 ${naam}`);
-    if (data.email)        items.push(`✉️ ${data.email}`);
-    if (data.telefoonnummer) items.push(`📱 ${data.telefoonnummer}`);
-    if (items.length) {
-      document.getElementById('banner-items').innerHTML = items.map(i =>
-        `<span class="prefill-item">${i}</span>`
-      ).join('');
-      document.getElementById('prefill-banner').style.display = '';
-    }
+    // Pre-fill persoonsgegevens
+    if (data.voornaam)       document.getElementById('voornaam').value = data.voornaam;
+    if (data.achternaam)     document.getElementById('achternaam').value = data.achternaam;
+    if (data.email)          document.getElementById('email').value = data.email;
+    if (data.telefoonnummer) document.getElementById('telefoonnummer').value = data.telefoonnummer;
 
     showState(null); // toon formulier
     document.getElementById('form-area').style.display = '';
@@ -344,6 +355,10 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
 
   const val = id => document.getElementById(id).value.trim();
   const fields = {
+    voornaam:         val('voornaam'),
+    achternaam:       val('achternaam'),
+    email:            val('email'),
+    telefoonnummer:   val('telefoonnummer'),
     straat:           val('straat'),
     huisnummer:       val('huisnummer'),
     postcode:         val('postcode'),
@@ -362,6 +377,9 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     return ok;
   };
 
+  if (!mark('voornaam',         !!fields.voornaam))         errors.push('Voornaam is verplicht');
+  if (!mark('achternaam',       !!fields.achternaam))       errors.push('Achternaam is verplicht');
+  if (!mark('email',            !!fields.email))            errors.push('E-mailadres is verplicht');
   if (!mark('straat',           !!fields.straat))           errors.push('Straat is verplicht');
   if (!mark('huisnummer',       !!fields.huisnummer))       errors.push('Huisnummer is verplicht');
   if (!mark('postcode',         !!fields.postcode))         errors.push('Postcode is verplicht');
