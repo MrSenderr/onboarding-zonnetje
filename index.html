@@ -205,18 +205,29 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
     <!-- Kopie ID -->
     <div class="card">
       <div class="card-title">📄 Kopie ID / paspoort</div>
-      <div class="fg" style="margin-bottom:0">
-        <label>Upload een foto of scan<span class="opt"> (aanbevolen)</span></label>
-        <label class="upload-zone" id="upload-zone" for="f-id-kopie">
-          <div class="upload-icoon" id="upload-icoon">📎</div>
+      <div class="fg" style="margin-bottom:.75rem">
+        <label>Voorzijde<span class="opt"> (aanbevolen)</span></label>
+        <label class="upload-zone" id="upload-zone-voor" for="f-id-kopie-voor">
+          <div class="upload-icoon" id="upload-icoon-voor">📎</div>
           <div>
-            <div class="upload-tekst-hoofd" id="upload-hoofd">Bestand kiezen</div>
-            <div class="upload-tekst-sub" id="upload-sub">JPG, PNG of PDF — voorkant van je ID of paspoort</div>
+            <div class="upload-tekst-hoofd" id="upload-hoofd-voor">Bestand kiezen</div>
+            <div class="upload-tekst-sub" id="upload-sub-voor">JPG, PNG of PDF — voorkant</div>
           </div>
-          <input type="file" id="f-id-kopie" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="onIdUpload(this)">
+          <input type="file" id="f-id-kopie-voor" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="onIdUpload(this,'voor')">
         </label>
-        <span style="font-size:.8rem;color:var(--t3);margin-top:.3rem">Geen bestand? Geen probleem — je kunt dit later aanleveren.</span>
       </div>
+      <div class="fg" style="margin-bottom:0">
+        <label>Achterzijde<span class="opt"> (aanbevolen)</span></label>
+        <label class="upload-zone" id="upload-zone-achter" for="f-id-kopie-achter">
+          <div class="upload-icoon" id="upload-icoon-achter">📎</div>
+          <div>
+            <div class="upload-tekst-hoofd" id="upload-hoofd-achter">Bestand kiezen</div>
+            <div class="upload-tekst-sub" id="upload-sub-achter">JPG, PNG of PDF — achterkant</div>
+          </div>
+          <input type="file" id="f-id-kopie-achter" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="onIdUpload(this,'achter')">
+        </label>
+      </div>
+      <span style="font-size:.8rem;color:var(--t3);margin-top:.5rem;display:block">Geen bestand? Geen probleem — je kunt dit later aanleveren.</span>
     </div>
 
     <!-- Adres -->
@@ -325,9 +336,10 @@ const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 
 let loonheffing = null;
 let tshirtMaat  = null;
-let geslacht    = null;
-let idKopieUrl  = null;
-let tokenVal    = null;
+let geslacht              = null;
+let idKopieUrl            = null;
+let idKopieAchterzijdeUrl = null;
+let tokenVal              = null;
 
 // ── Lees token uit URL ──────────────────────────────────────────────────────
 function getToken() {
@@ -365,26 +377,28 @@ function setGeslacht(g) {
 }
 
 // ── ID upload ─────────────────────────────────────────────────────────────────
-async function onIdUpload(input) {
+async function onIdUpload(input, zijde) {
   const file = input.files[0];
   if (!file) return;
-  const zone  = document.getElementById('upload-zone');
-  const hoofd = document.getElementById('upload-hoofd');
-  const sub   = document.getElementById('upload-sub');
-  const icoon = document.getElementById('upload-icoon');
+  const sfx  = zijde === 'achter' ? '-achter' : '-voor';
+  const zone  = document.getElementById('upload-zone' + sfx);
+  const hoofd = document.getElementById('upload-hoofd' + sfx);
+  const sub   = document.getElementById('upload-sub' + sfx);
+  const icoon = document.getElementById('upload-icoon' + sfx);
   hoofd.textContent = 'Bezig met uploaden…';
   sub.textContent   = '';
   zone.style.opacity = '.6';
   try {
     const ext  = file.name.split('.').pop().toLowerCase();
-    const path = `id-kopie/onboarding-${tokenVal}-${Date.now()}.${ext}`;
+    const path = `id-kopie/onboarding-${tokenVal}-${zijde}-${Date.now()}.${ext}`;
     const res  = await fetch(`${SB_URL}/storage/v1/object/Documenten/${path}`, {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + SB_KEY, 'apikey': SB_KEY, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
       body: file,
     });
     if (!res.ok) throw new Error('Upload mislukt (' + res.status + ')');
-    idKopieUrl = path;
+    if (zijde === 'achter') { idKopieAchterzijdeUrl = path; }
+    else                    { idKopieUrl = path; }
     hoofd.textContent = file.name;
     sub.textContent   = (file.size / 1024 / 1024).toFixed(1) + ' MB — geüpload ✓';
     icoon.textContent = '✅';
@@ -529,6 +543,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
         tshirt_maat: tshirtMaat,
         geslacht: geslacht,
         id_kopie_url: idKopieUrl,
+        id_kopie_achterzijde: idKopieAchterzijdeUrl,
       }),
     });
     const data = await res.json();
