@@ -188,6 +188,37 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
       </div>
     </div>
 
+    <!-- Geslacht -->
+    <div class="card">
+      <div class="card-title">🪪 Geslacht</div>
+      <div class="fg" style="margin-bottom:0">
+        <label>Wat is je geslacht?<span class="req">*</span></label>
+        <div class="gsl-row" id="gsl-row">
+          <button type="button" class="gsl-btn" onclick="setGeslacht('M')">Man</button>
+          <button type="button" class="gsl-btn" onclick="setGeslacht('V')">Vrouw</button>
+          <button type="button" class="gsl-btn" onclick="setGeslacht('X')">Zeg ik liever niet</button>
+        </div>
+        <span style="font-size:.8rem;color:var(--t3)">Vereist voor de loonadministratie</span>
+      </div>
+    </div>
+
+    <!-- Kopie ID -->
+    <div class="card">
+      <div class="card-title">📄 Kopie ID / paspoort</div>
+      <div class="fg" style="margin-bottom:0">
+        <label>Upload een foto of scan<span class="opt"> (aanbevolen)</span></label>
+        <label class="upload-zone" id="upload-zone" for="f-id-kopie">
+          <div class="upload-icoon" id="upload-icoon">📎</div>
+          <div>
+            <div class="upload-tekst-hoofd" id="upload-hoofd">Bestand kiezen</div>
+            <div class="upload-tekst-sub" id="upload-sub">JPG, PNG of PDF — voorkant van je ID of paspoort</div>
+          </div>
+          <input type="file" id="f-id-kopie" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="onIdUpload(this)">
+        </label>
+        <span style="font-size:.8rem;color:var(--t3);margin-top:.3rem">Geen bestand? Geen probleem — je kunt dit later aanleveren.</span>
+      </div>
+    </div>
+
     <!-- Adres -->
     <div class="card">
       <div class="card-title">🏠 Woonadres</div>
@@ -274,37 +305,6 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
           <button type="button" class="maat-btn" onclick="setMaat('XL')">XL</button>
           <button type="button" class="maat-btn" onclick="setMaat('XXL')">XXL</button>
         </div>
-      </div>
-    </div>
-
-    <!-- Geslacht -->
-    <div class="card">
-      <div class="card-title">🪪 Geslacht</div>
-      <div class="fg" style="margin-bottom:0">
-        <label>Wat is je geslacht?<span class="req">*</span></label>
-        <div class="gsl-row" id="gsl-row">
-          <button type="button" class="gsl-btn" onclick="setGeslacht('M')">Man</button>
-          <button type="button" class="gsl-btn" onclick="setGeslacht('V')">Vrouw</button>
-          <button type="button" class="gsl-btn" onclick="setGeslacht('X')">Zeg ik liever niet</button>
-        </div>
-        <span style="font-size:.8rem;color:var(--t3)">Vereist voor de loonadministratie</span>
-      </div>
-    </div>
-
-    <!-- Kopie ID -->
-    <div class="card">
-      <div class="card-title">📄 Kopie ID / paspoort</div>
-      <div class="fg" style="margin-bottom:0">
-        <label>Upload een foto of scan<span class="opt"> (aanbevolen)</span></label>
-        <label class="upload-zone" id="upload-zone" for="f-id-kopie">
-          <div class="upload-icoon" id="upload-icoon">📎</div>
-          <div>
-            <div class="upload-tekst-hoofd" id="upload-hoofd">Bestand kiezen</div>
-            <div class="upload-tekst-sub" id="upload-sub">JPG, PNG of PDF — voorkant van je ID of paspoort</div>
-          </div>
-          <input type="file" id="f-id-kopie" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="onIdUpload(this)">
-        </label>
-        <span style="font-size:.8rem;color:var(--t3);margin-top:.3rem">Geen bestand? Geen probleem — je kunt dit later aanleveren.</span>
       </div>
     </div>
 
