@@ -66,6 +66,22 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
 .maat-btn{padding:.5rem .9rem;border:1.5px solid var(--bdr);border-radius:var(--rs);background:#fff;font-family:'EB Garamond',serif;font-size:.95rem;font-weight:600;color:var(--t2);cursor:pointer;transition:all .15s;min-width:2.8rem;text-align:center}
 .maat-btn.sel{border-color:var(--teal);background:var(--teal);color:#fff}
 
+/* ── GESLACHT ───────────────────────────── */
+.gsl-row{display:flex;gap:.6rem;margin-top:.1rem;flex-wrap:wrap}
+.gsl-btn{flex:1;min-width:0;padding:.65rem .5rem;border:1.5px solid var(--bdr);border-radius:var(--rs);background:#fff;font-family:'EB Garamond',serif;font-size:.95rem;color:var(--t2);cursor:pointer;text-align:center;transition:all .15s;font-weight:600}
+.gsl-btn.sel{border-color:var(--teal);background:var(--teal-l);color:var(--teal)}
+
+/* ── ID UPLOAD ──────────────────────────── */
+.upload-zone{display:flex;align-items:center;gap:1rem;border:1.5px dashed var(--bdr);border-radius:var(--rs);padding:1rem 1.15rem;background:#fff;cursor:pointer;transition:all .15s;margin-top:.1rem}
+.upload-zone:hover{border-color:var(--teal);background:var(--teal-l)}
+.upload-zone.heeft-bestand{border-color:var(--grn);background:var(--grn-l);border-style:solid}
+.upload-icoon{width:42px;height:42px;border-radius:var(--rs);background:var(--teal-l);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.3rem;transition:background .15s}
+.upload-zone.heeft-bestand .upload-icoon{background:var(--grn-l)}
+.upload-tekst-hoofd{font-weight:600;font-size:.92rem;color:var(--text);margin-bottom:.1rem}
+.upload-tekst-sub{font-size:.82rem;color:var(--t3)}
+.upload-zone.heeft-bestand .upload-tekst-hoofd{color:var(--grn)}
+.upload-zone.heeft-bestand .upload-tekst-sub{color:var(--grn)}
+
 /* ── PREFILL BANNER ─────────────────────── */
 .prefill-banner{background:var(--teal-l);border:1px solid #9ec7c9;border-radius:var(--rs);padding:1rem 1.25rem;margin-bottom:1.25rem;font-size:.88rem;color:var(--teal-d)}
 .prefill-banner strong{display:block;margin-bottom:.2rem}
@@ -261,6 +277,37 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
       </div>
     </div>
 
+    <!-- Geslacht -->
+    <div class="card">
+      <div class="card-title">🪪 Geslacht</div>
+      <div class="fg" style="margin-bottom:0">
+        <label>Wat is je geslacht?<span class="req">*</span></label>
+        <div class="gsl-row" id="gsl-row">
+          <button type="button" class="gsl-btn" onclick="setGeslacht('M')">Man</button>
+          <button type="button" class="gsl-btn" onclick="setGeslacht('V')">Vrouw</button>
+          <button type="button" class="gsl-btn" onclick="setGeslacht('X')">Zeg ik liever niet</button>
+        </div>
+        <span style="font-size:.8rem;color:var(--t3)">Vereist voor de loonadministratie</span>
+      </div>
+    </div>
+
+    <!-- Kopie ID -->
+    <div class="card">
+      <div class="card-title">📄 Kopie ID / paspoort</div>
+      <div class="fg" style="margin-bottom:0">
+        <label>Upload een foto of scan<span class="opt"> (aanbevolen)</span></label>
+        <label class="upload-zone" id="upload-zone" for="f-id-kopie">
+          <div class="upload-icoon" id="upload-icoon">📎</div>
+          <div>
+            <div class="upload-tekst-hoofd" id="upload-hoofd">Bestand kiezen</div>
+            <div class="upload-tekst-sub" id="upload-sub">JPG, PNG of PDF — voorkant van je ID of paspoort</div>
+          </div>
+          <input type="file" id="f-id-kopie" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="onIdUpload(this)">
+        </label>
+        <span style="font-size:.8rem;color:var(--t3);margin-top:.3rem">Geen bestand? Geen probleem — je kunt dit later aanleveren.</span>
+      </div>
+    </div>
+
     <div id="form-err" style="display:none;background:var(--red-l);border:1.5px solid var(--red);border-radius:var(--rs);padding:.85rem 1rem;font-size:.88rem;color:var(--red);margin-bottom:.75rem"></div>
 
     <button type="submit" class="btn-submit" id="submit-btn">Formulier versturen →</button>
@@ -273,9 +320,13 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
 
 <script>
 const SUBMIT_URL = 'https://xukzumqddeateztmjpzf.supabase.co/functions/v1/submit-onboarding';
+const SB_URL     = 'https://xukzumqddeateztmjpzf.supabase.co';
+const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1a3p1bXFkZGVhdGV6dG1qcHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NjMzOTIsImV4cCI6MjA5NTIzOTM5Mn0.7VJ4jf9SVg30SKbFJH94Nj2YsCcf9jEbToCeALAT72Y';
 
 let loonheffing = null;
 let tshirtMaat  = null;
+let geslacht    = null;
+let idKopieUrl  = null;
 let tokenVal    = null;
 
 // ── Lees token uit URL ──────────────────────────────────────────────────────
@@ -303,6 +354,48 @@ function setLoonheffing(val) {
 function setMaat(m) {
   tshirtMaat = m;
   document.querySelectorAll('.maat-btn').forEach(b => b.classList.toggle('sel', b.textContent === m));
+}
+
+// ── Geslacht ─────────────────────────────────────────────────────────────────
+function setGeslacht(g) {
+  geslacht = g;
+  const labels = { M: 'Man', V: 'Vrouw', X: 'Zeg ik liever niet' };
+  document.querySelectorAll('.gsl-btn').forEach(b => b.classList.toggle('sel', b.textContent.trim() === labels[g]));
+  document.querySelectorAll('#gsl-row button').forEach(b => b.style.borderColor = '');
+}
+
+// ── ID upload ─────────────────────────────────────────────────────────────────
+async function onIdUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const zone  = document.getElementById('upload-zone');
+  const hoofd = document.getElementById('upload-hoofd');
+  const sub   = document.getElementById('upload-sub');
+  const icoon = document.getElementById('upload-icoon');
+  hoofd.textContent = 'Bezig met uploaden…';
+  sub.textContent   = '';
+  zone.style.opacity = '.6';
+  try {
+    const ext  = file.name.split('.').pop().toLowerCase();
+    const path = `id-kopie/onboarding-${tokenVal}-${Date.now()}.${ext}`;
+    const res  = await fetch(`${SB_URL}/storage/v1/object/Documenten/${path}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + SB_KEY, 'apikey': SB_KEY, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+      body: file,
+    });
+    if (!res.ok) throw new Error('Upload mislukt (' + res.status + ')');
+    idKopieUrl = path;
+    hoofd.textContent = file.name;
+    sub.textContent   = (file.size / 1024 / 1024).toFixed(1) + ' MB — geüpload ✓';
+    icoon.textContent = '✅';
+    zone.classList.add('heeft-bestand');
+  } catch (err) {
+    hoofd.textContent = 'Upload mislukt — probeer opnieuw';
+    sub.textContent   = err.message;
+    icoon.textContent = '❌';
+  } finally {
+    zone.style.opacity = '';
+  }
 }
 
 // ── Valideer IBAN (basis) ───────────────────────────────────────────────────
@@ -408,6 +501,10 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     document.querySelectorAll('.maat-btn').forEach(b => b.style.borderColor = 'var(--red)');
     errors.push('Kies een T-shirt maat');
   }
+  if (!geslacht) {
+    document.querySelectorAll('.gsl-btn').forEach(b => b.style.borderColor = 'var(--red)');
+    errors.push('Geef je geslacht aan');
+  }
 
   if (errors.length) {
     errEl.innerHTML = '❌ <strong>Vul alle verplichte velden in:</strong><br>• ' + errors.join('<br>• ');
@@ -430,6 +527,8 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
         ...fields,
         loonheffingskorting: loonheffing,
         tshirt_maat: tshirtMaat,
+        geslacht: geslacht,
+        id_kopie_url: idKopieUrl,
       }),
     });
     const data = await res.json();
