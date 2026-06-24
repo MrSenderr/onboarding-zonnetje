@@ -706,7 +706,9 @@ document.getElementById('sig-clear').addEventListener('click', () => {
 });
 
 window.addEventListener('resize', initSigCanvas);
-setTimeout(initSigCanvas, 50);
+new ResizeObserver(entries => {
+  if (entries[0].contentRect.width > 0) initSigCanvas();
+}).observe(sigCanvas);
 
 // ── PDF genereren ─────────────────────────────────────────────────────────────
 async function genereerLoonheffingPDF(fields, lhk, aokVal, sig) {
