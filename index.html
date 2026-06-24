@@ -664,13 +664,14 @@ function initSigCanvas() {
 }
 
 function sigPos(e) {
-  const r   = sigCanvas.getBoundingClientRect();
-  const src = e.touches ? e.touches[0] : e;
-  return { x: src.clientX - r.left, y: src.clientY - r.top };
+  const r = sigCanvas.getBoundingClientRect();
+  return { x: e.clientX - r.left, y: e.clientY - r.top };
 }
 
 function sigStart(e) {
+  e.preventDefault();
   sigDrawing = true;
+  sigCanvas.setPointerCapture(e.pointerId);
   sigCtx.beginPath();
   const p = sigPos(e);
   sigCtx.moveTo(p.x, p.y);
@@ -678,11 +679,12 @@ function sigStart(e) {
 }
 function sigMove(e) {
   if (!sigDrawing) return;
+  e.preventDefault();
   const p = sigPos(e);
   sigCtx.lineTo(p.x, p.y);
   sigCtx.stroke();
 }
-function sigEnd() {
+function sigEnd(e) {
   if (!sigDrawing) return;
   sigDrawing = false;
   sigData = sigCanvas.toDataURL('image/png');
@@ -691,13 +693,10 @@ function sigEnd() {
   document.getElementById('sig-err').style.display = 'none';
 }
 
-sigCanvas.addEventListener('mousedown',  sigStart);
-sigCanvas.addEventListener('mousemove',  sigMove);
-sigCanvas.addEventListener('mouseup',    sigEnd);
-sigCanvas.addEventListener('mouseleave', sigEnd);
-sigCanvas.addEventListener('touchstart', e => { e.preventDefault(); sigStart(e); }, { passive:false });
-sigCanvas.addEventListener('touchmove',  e => { e.preventDefault(); sigMove(e);  }, { passive:false });
-sigCanvas.addEventListener('touchend',   e => { e.preventDefault(); sigEnd();    }, { passive:false });
+sigCanvas.addEventListener('pointerdown', sigStart);
+sigCanvas.addEventListener('pointermove', sigMove);
+sigCanvas.addEventListener('pointerup',   sigEnd);
+sigCanvas.addEventListener('pointercancel', sigEnd);
 
 document.getElementById('sig-clear').addEventListener('click', () => {
   initSigCanvas();
