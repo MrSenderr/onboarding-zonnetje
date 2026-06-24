@@ -878,7 +878,7 @@ async function genereerLoonheffingPDF(fields, lhk, aokVal, sig) {
   doc.setFontSize(7);
   doc.setTextColor(180,160,130);
   doc.setFont('helvetica','normal');
-  doc.text(`Aangemaakt op ${today} via het onboardingformulier van Snackerie 't Zonnetje`,105,289,{align:'center'});
+  doc.text(`Aangemaakt op ${today} via het gegevensformulier van Snackerie 't Zonnetje`,105,289,{align:'center'});
 
   const bestandsnaam = `Loonheffingsverklaring - ${volledigeNaam} - ${today.replace(/\//g,'-')}.pdf`;
   const blob = doc.output('blob');
