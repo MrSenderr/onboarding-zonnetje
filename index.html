@@ -153,6 +153,10 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
   <div class="state-title">Bedankt!</div>
   <div class="state-sub grn">Je gegevens zijn succesvol ontvangen.</div>
   <div class="state-sub" style="margin-top:.75rem">We nemen binnenkort contact met je op over je startdatum en rooster. Welkom bij het team!</div>
+  <div id="pdf-download-wrap" style="display:none;margin-top:1.75rem;text-align:center">
+    <p style="font-size:.88rem;color:var(--t2);margin:0 0 .75rem">Je loonbelastingverklaring is klaar. Sla hem op voor je eigen administratie.</p>
+    <a id="pdf-download-btn" href="#" download style="display:inline-flex;align-items:center;gap:.5rem;background:var(--teal);color:#f5ede0;padding:.7rem 1.4rem;border-radius:var(--rs);font-family:'Cinzel',serif;font-size:.9rem;font-weight:600;text-decoration:none">&#8595; Loonbelastingverklaring downloaden</a>
+  </div>
 </div>
 
 <!-- FORMULIER -->
@@ -574,6 +578,9 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
   btn.disabled = true;
   btn.textContent = 'Versturen…';
 
+  const volledigeNaamPost = `${fields.voornaam} ${fields.achternaam}`;
+  const loonheffingPdfPad = `loonheffing/${tokenVal}-${volledigeNaamPost.replace(/\s+/g,'-').toLowerCase()}.pdf`;
+
   try {
     const res = await fetch(SUBMIT_URL, {
       method: 'POST',
@@ -586,6 +593,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
         geslacht: geslacht,
         id_kopie_url: idKopieUrl,
         id_kopie_achterzijde: idKopieAchterzijdeUrl,
+        loonheffing_pdf: loonheffingPdfPad,
       }),
     });
     const data = await res.json();
@@ -601,7 +609,20 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     }
 
     showState('success-state');
-    genereerLoonheffingPDF(fields, loonheffing, aok, sigData);
+    try {
+      const { blob, bestandsnaam } = await genereerLoonheffingPDF(fields, loonheffing, aok, sigData);
+      await fetch(`${SB_URL}/storage/v1/object/Documenten/${loonheffingPdfPad}`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + SB_KEY, 'apikey': SB_KEY, 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
+        body: blob,
+      });
+      const dlBtn = document.getElementById('pdf-download-btn');
+      dlBtn.href = URL.createObjectURL(blob);
+      dlBtn.download = bestandsnaam;
+      document.getElementById('pdf-download-wrap').style.display = '';
+    } catch(pdfErr) {
+      console.warn('[loonheffing] PDF genereren/uploaden mislukt:', pdfErr);
+    }
 
   } catch (err) {
     errEl.textContent = 'Netwerkfout. Controleer je verbinding en probeer opnieuw.';
@@ -856,20 +877,9 @@ async function genereerLoonheffingPDF(fields, lhk, aokVal, sig) {
   doc.setFont('helvetica','normal');
   doc.text(`Aangemaakt op ${today} via het onboardingformulier van Snackerie 't Zonnetje`,105,289,{align:'center'});
 
-  // Download
-  const bestandsnaam = `loonheffingsverklaring-${volledigeNaam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
-  doc.save(bestandsnaam);
-
-  // Upload naar Supabase Storage
-  try {
-    const blob = doc.output('blob');
-    const pad  = `loonheffing/${tokenVal}-${volledigeNaam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
-    await fetch(`${SB_URL}/storage/v1/object/Documenten/${pad}`,{
-      method:'POST',
-      headers:{'Authorization':'Bearer '+SB_KEY,'apikey':SB_KEY,'Content-Type':'application/pdf','x-upsert':'true'},
-      body:blob,
-    });
-  } catch(e) { console.warn('[loonheffing] PDF upload mislukt:',e); }
+  const bestandsnaam = `Loonheffingsverklaring - ${volledigeNaam} - ${today.replace(/\//g,'-')}.pdf`;
+  const blob = doc.output('blob');
+  return { blob, bestandsnaam };
 }
 
 // ── Start ────────────────────────────────────────────────────────────────────
