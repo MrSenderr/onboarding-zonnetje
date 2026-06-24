@@ -475,7 +475,9 @@ async function init() {
   showState('loading-state');
 
   try {
-    const res = await fetch(`${SUBMIT_URL}?token=${encodeURIComponent(tokenVal)}`);
+    const res = await fetch(`${SUBMIT_URL}?token=${encodeURIComponent(tokenVal)}`, {
+      headers: { 'Authorization': 'Bearer ' + SB_KEY, 'apikey': SB_KEY }
+    });
     const data = await res.json();
 
     if (res.status === 410 || (data.error && data.error.toLowerCase().includes('al eerder'))) {
