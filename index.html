@@ -88,6 +88,13 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
 .prefill-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
 .prefill-item{background:#fff;border:1px solid #9ec7c9;border-radius:3px;padding:.2rem .6rem;font-size:.82rem;color:var(--teal-d)}
 
+/* ── HANDTEKENING ───────────────────────── */
+.sig-wrap{position:relative;background:#fff;border:2px dashed var(--bdr);border-radius:var(--rs);overflow:hidden}
+.sig-wrap.signed{border:2px solid var(--teal)}
+.sig-wrap.err{border-color:var(--red)}
+.sig-canvas{width:100%;height:180px;display:block;cursor:crosshair;touch-action:none}
+.sig-placeholder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--t3);font-size:.95rem;pointer-events:none;font-style:italic;transition:opacity .15s}
+
 /* ── SUBMIT ─────────────────────────────── */
 .btn-submit{width:100%;padding:.9rem;background:var(--teal);color:#f5ede0;border:none;border-radius:var(--rs);font-family:'Cinzel',serif;font-size:1rem;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:background .15s;margin-top:.5rem}
 .btn-submit:hover{background:var(--teal-d)}
@@ -105,6 +112,7 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
 /* ── FOOTER ─────────────────────────────── */
 .footer{text-align:center;padding:1.5rem;font-size:.8rem;color:var(--t3);border-top:1px solid var(--bdr)}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -319,6 +327,18 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
       </div>
     </div>
 
+    <!-- Handtekening -->
+    <div class="card">
+      <div class="card-title">✍️ Handtekening</div>
+      <p style="font-size:.85rem;color:var(--t2);margin-bottom:.85rem;line-height:1.55">Door te ondertekenen bevestig je dat bovenstaande gegevens correct en naar waarheid zijn ingevuld. Er wordt automatisch een <strong>Opgaaf gegevens voor de loonheffingen</strong> voor je aangemaakt en gedownload.</p>
+      <div class="sig-wrap" id="sig-wrap">
+        <canvas id="sig-canvas" class="sig-canvas"></canvas>
+        <div class="sig-placeholder" id="sig-placeholder">Zet hier uw handtekening</div>
+      </div>
+      <button type="button" id="sig-clear" style="margin-top:.5rem;font-size:.82rem;color:var(--t2);background:none;border:1px solid var(--bdr);border-radius:var(--rs);padding:.3rem .8rem;cursor:pointer;font-family:inherit">↺ Opnieuw</button>
+      <div id="sig-err" style="display:none;color:var(--red);font-size:.82rem;margin-top:.4rem">Handtekening is verplicht</div>
+    </div>
+
     <div id="form-err" style="display:none;background:var(--red-l);border:1.5px solid var(--red);border-radius:var(--rs);padding:.85rem 1rem;font-size:.88rem;color:var(--red);margin-bottom:.75rem"></div>
 
     <button type="submit" class="btn-submit" id="submit-btn">Formulier versturen →</button>
@@ -519,6 +539,11 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     document.querySelectorAll('.gsl-btn').forEach(b => b.style.borderColor = 'var(--red)');
     errors.push('Geef je geslacht aan');
   }
+  if (!sigData) {
+    sigWrap.classList.add('err');
+    document.getElementById('sig-err').style.display = '';
+    errors.push('Handtekening is verplicht');
+  }
 
   if (errors.length) {
     errEl.innerHTML = '❌ <strong>Vul alle verplichte velden in:</strong><br>• ' + errors.join('<br>• ');
@@ -559,6 +584,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     }
 
     showState('success-state');
+    genereerLoonheffingPDF(fields, loonheffing, sigData);
 
   } catch (err) {
     errEl.textContent = 'Netwerkfout. Controleer je verbinding en probeer opnieuw.';
@@ -575,6 +601,185 @@ document.querySelectorAll('input').forEach(inp => {
 document.getElementById('iban').addEventListener('input', function() {
   this.value = this.value.toUpperCase();
 });
+
+// ── Handtekening pad ─────────────────────────────────────────────────────────
+let sigData = null;
+const sigCanvas      = document.getElementById('sig-canvas');
+const sigCtx         = sigCanvas.getContext('2d');
+const sigWrap        = document.getElementById('sig-wrap');
+const sigPlaceholder = document.getElementById('sig-placeholder');
+let sigDrawing = false;
+
+function initSigCanvas() {
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = sigCanvas.getBoundingClientRect();
+  sigCanvas.width  = rect.width  * dpr;
+  sigCanvas.height = rect.height * dpr;
+  sigCtx.setTransform(1,0,0,1,0,0);
+  sigCtx.scale(dpr, dpr);
+  sigCtx.strokeStyle = '#2c1f0e';
+  sigCtx.lineWidth   = 2.5;
+  sigCtx.lineCap     = 'round';
+  sigCtx.lineJoin    = 'round';
+}
+
+function sigPos(e) {
+  const r   = sigCanvas.getBoundingClientRect();
+  const src = e.touches ? e.touches[0] : e;
+  return { x: src.clientX - r.left, y: src.clientY - r.top };
+}
+
+function sigStart(e) {
+  sigDrawing = true;
+  sigCtx.beginPath();
+  const p = sigPos(e);
+  sigCtx.moveTo(p.x, p.y);
+  sigPlaceholder.style.opacity = '0';
+}
+function sigMove(e) {
+  if (!sigDrawing) return;
+  const p = sigPos(e);
+  sigCtx.lineTo(p.x, p.y);
+  sigCtx.stroke();
+}
+function sigEnd() {
+  if (!sigDrawing) return;
+  sigDrawing = false;
+  sigData = sigCanvas.toDataURL('image/png');
+  sigWrap.classList.add('signed');
+  sigWrap.classList.remove('err');
+  document.getElementById('sig-err').style.display = 'none';
+}
+
+sigCanvas.addEventListener('mousedown',  sigStart);
+sigCanvas.addEventListener('mousemove',  sigMove);
+sigCanvas.addEventListener('mouseup',    sigEnd);
+sigCanvas.addEventListener('mouseleave', sigEnd);
+sigCanvas.addEventListener('touchstart', e => { e.preventDefault(); sigStart(e); }, { passive:false });
+sigCanvas.addEventListener('touchmove',  e => { e.preventDefault(); sigMove(e);  }, { passive:false });
+sigCanvas.addEventListener('touchend',   e => { e.preventDefault(); sigEnd();    }, { passive:false });
+
+document.getElementById('sig-clear').addEventListener('click', () => {
+  initSigCanvas();
+  sigData = null;
+  sigWrap.classList.remove('signed','err');
+  sigPlaceholder.style.opacity = '';
+});
+
+window.addEventListener('resize', initSigCanvas);
+setTimeout(initSigCanvas, 50);
+
+// ── PDF genereren ─────────────────────────────────────────────────────────────
+async function genereerLoonheffingPDF(fields, lhk, sig) {
+  const { jsPDF } = window.jspdf;
+  const doc   = new jsPDF({ unit:'mm', format:'a4' });
+  const today = new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const naam  = `${fields.voornaam} ${fields.achternaam}`;
+  const gebDt = fields.geboortedatum ? new Date(fields.geboortedatum+'T00:00:00').toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'}) : '–';
+  const adres = `${fields.straat} ${fields.huisnummer}, ${fields.postcode} ${fields.woonplaats}`;
+
+  // Header balk
+  doc.setFillColor(29,110,114);
+  doc.rect(0,0,210,30,'F');
+  doc.setTextColor(245,234,212);
+  doc.setFontSize(15);
+  doc.setFont('helvetica','bold');
+  doc.text('Opgaaf gegevens voor de loonheffingen',105,13,{align:'center'});
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica','normal');
+  doc.text("Snackerie 't Zonnetje  ·  Vrije opgaaf conform art. 28 Wet LB 1964",105,22,{align:'center'});
+
+  let y = 40;
+
+  function sectie(titel) {
+    doc.setFillColor(245,234,212);
+    doc.rect(15,y-5,180,9,'F');
+    doc.setFontSize(11);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(44,31,14);
+    doc.text(titel,20,y+0.5);
+    y += 12;
+  }
+
+  function rij(label, waarde) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(107,90,62);
+    doc.text(label,22,y);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(44,31,14);
+    doc.text(waarde||'–',75,y);
+    y += 8;
+  }
+
+  sectie('1.  Gegevens werknemer');
+  rij('Naam', naam);
+  rij('BSN', fields.bsn);
+  rij('Geboortedatum', gebDt);
+  rij('Adres', adres);
+
+  y += 4;
+  sectie('2.  Loonheffingskorting');
+  doc.setFontSize(10);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(107,90,62);
+  doc.text('Toepassen bij Snackerie \'t Zonnetje',22,y);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(lhk ? 4 : 184, lhk ? 120 : 58, lhk ? 87 : 42);
+  doc.text(lhk ? 'Ja' : 'Nee',110,y);
+  y += 8;
+  if (lhk) {
+    doc.setFont('helvetica','bold');
+    doc.setTextColor(107,90,62);
+    doc.text('Ingangsdatum',22,y);
+    doc.setFont('helvetica','normal');
+    doc.setTextColor(44,31,14);
+    doc.text(today,75,y);
+    y += 8;
+  }
+
+  y += 4;
+  sectie('3.  Ondertekening');
+  rij('Datum', today);
+  doc.setFontSize(10);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(107,90,62);
+  doc.text('Handtekening',22,y);
+  y += 4;
+  doc.setDrawColor(205,191,160);
+  doc.setLineWidth(0.4);
+  doc.rect(22,y,90,38);
+  if (sig) doc.addImage(sig,'PNG',22,y,90,38);
+  y += 43;
+
+  // Verklaring
+  doc.setFontSize(8);
+  doc.setTextColor(107,90,62);
+  doc.setFont('helvetica','italic');
+  const verk = `Ondergetekende, ${naam}, verklaart hierbij dat bovenstaande gegevens juist en volledig zijn ingevuld. Deze vrije opgaaf is rechtsgeldig als alternatief voor het Belastingdienstmodel (LH 008).`;
+  doc.text(doc.splitTextToSize(verk,170),20,y);
+
+  // Footer
+  doc.setFontSize(7);
+  doc.setTextColor(180,160,130);
+  doc.setFont('helvetica','normal');
+  doc.text(`Aangemaakt op ${today} via het onboardingformulier van Snackerie 't Zonnetje`,105,289,{align:'center'});
+
+  // Download
+  const bestandsnaam = `loonheffingsverklaring-${naam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
+  doc.save(bestandsnaam);
+
+  // Upload naar Supabase Storage
+  try {
+    const blob = doc.output('blob');
+    const pad  = `loonheffing/${tokenVal}-${naam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
+    await fetch(`${SB_URL}/storage/v1/object/Documenten/${pad}`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+SB_KEY,'apikey':SB_KEY,'Content-Type':'application/pdf','x-upsert':'true'},
+      body:blob,
+    });
+  } catch(e) { console.warn('[loonheffing] PDF upload mislukt:',e); }
+}
 
 // ── Start ────────────────────────────────────────────────────────────────────
 init();
