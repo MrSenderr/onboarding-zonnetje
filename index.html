@@ -295,7 +295,7 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
 
     <!-- Loonheffingskorting -->
     <div class="card">
-      <div class="card-title">✅ Loonheffingskorting</div>
+      <div class="card-title">✅ Loonheffingskorting (vraag 2a)</div>
       <div class="fg" style="margin-bottom:0">
         <label>Wil je de loonheffingskorting bij ons toepassen?<span class="req">*</span></label>
         <div class="lh-toggle">
@@ -309,6 +309,14 @@ input.err,select.err{border-color:var(--red);background:var(--red-l)}
           <strong>Kies Nee</strong> als je elders ook werkt en daar al de korting toepast.<br><br>
           <span style="font-style:italic">Bij twijfel: kies <strong>Nee</strong>. Zo voorkom je dat je aan het einde van het jaar belasting moet bijbetalen.</span>
         </div>
+      </div>
+      <div class="fg" style="margin-top:.85rem;margin-bottom:0">
+        <label>Wil je de alleenstaande-ouderenkorting toepassen? <span style="font-weight:400;color:var(--t3)">(vraag 2b — alleen invullen bij AOW)</span></label>
+        <div class="lh-toggle">
+          <button type="button" class="lh-btn" id="aok-ja" onclick="setAok(true)">Ja</button>
+          <button type="button" class="lh-btn" id="aok-nee" onclick="setAok(false)">Nee</button>
+        </div>
+        <span style="font-size:.8rem;color:var(--t3)">Alleen van toepassing als je AOW ontvangt. Kies Nee als je dat niet weet.</span>
       </div>
     </div>
 
@@ -355,6 +363,7 @@ const SB_URL     = 'https://xukzumqddeateztmjpzf.supabase.co';
 const SB_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh1a3p1bXFkZGVhdGV6dG1qcHpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2NjMzOTIsImV4cCI6MjA5NTIzOTM5Mn0.7VJ4jf9SVg30SKbFJH94Nj2YsCcf9jEbToCeALAT72Y';
 
 let loonheffing = null;
+let aok         = false;
 let tshirtMaat  = null;
 let geslacht              = null;
 let idKopieUrl            = null;
@@ -387,6 +396,14 @@ function setMaat(m) {
   tshirtMaat = m;
   document.querySelectorAll('.maat-btn').forEach(b => b.classList.toggle('sel', b.textContent === m));
 }
+
+// ── Alleenstaande-ouderenkorting ─────────────────────────────────────────────
+function setAok(val) {
+  aok = val;
+  document.getElementById('aok-ja').className  = 'lh-btn' + (val === true  ? ' sel-ja'  : '');
+  document.getElementById('aok-nee').className = 'lh-btn' + (val === false ? ' sel-nee' : '');
+}
+setAok(false); // standaard Nee
 
 // ── Geslacht ─────────────────────────────────────────────────────────────────
 function setGeslacht(g) {
@@ -584,7 +601,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     }
 
     showState('success-state');
-    genereerLoonheffingPDF(fields, loonheffing, sigData);
+    genereerLoonheffingPDF(fields, loonheffing, aok, sigData);
 
   } catch (err) {
     errEl.textContent = 'Netwerkfout. Controleer je verbinding en probeer opnieuw.';
@@ -670,109 +687,183 @@ window.addEventListener('resize', initSigCanvas);
 setTimeout(initSigCanvas, 50);
 
 // ── PDF genereren ─────────────────────────────────────────────────────────────
-async function genereerLoonheffingPDF(fields, lhk, sig) {
+async function genereerLoonheffingPDF(fields, lhk, aokVal, sig) {
   const { jsPDF } = window.jspdf;
   const doc   = new jsPDF({ unit:'mm', format:'a4' });
   const today = new Date().toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const naam  = `${fields.voornaam} ${fields.achternaam}`;
-  const gebDt = fields.geboortedatum ? new Date(fields.geboortedatum+'T00:00:00').toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'}) : '–';
-  const adres = `${fields.straat} ${fields.huisnummer}, ${fields.postcode} ${fields.woonplaats}`;
 
-  // Header balk
+  // Voorletters afleiden uit voornaam (bijv. "Jan Peter" → "J.P.")
+  const voorletters = (fields.voornaam||'').trim().split(/\s+/).map(n=>n[0].toUpperCase()+'.').join('');
+  const volledigeNaam = `${fields.voornaam} ${fields.achternaam}`;
+  const gebDt = fields.geboortedatum
+    ? new Date(fields.geboortedatum+'T00:00:00').toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'})
+    : '–';
+
+  // ── Header ──
   doc.setFillColor(29,110,114);
-  doc.rect(0,0,210,30,'F');
+  doc.rect(0,0,210,32,'F');
   doc.setTextColor(245,234,212);
   doc.setFontSize(15);
   doc.setFont('helvetica','bold');
   doc.text('Opgaaf gegevens voor de loonheffingen',105,13,{align:'center'});
-  doc.setFontSize(9.5);
+  doc.setFontSize(9);
   doc.setFont('helvetica','normal');
-  doc.text("Snackerie 't Zonnetje  ·  Vrije opgaaf conform art. 28 Wet LB 1964",105,22,{align:'center'});
+  doc.text("Snackerie 't Zonnetje  ·  Vrije opgaaf conform art. 28 Wet LB 1964  ·  Vanaf 2024",105,22,{align:'center'});
 
-  let y = 40;
+  let y = 42;
 
-  function sectie(titel) {
-    doc.setFillColor(245,234,212);
-    doc.rect(15,y-5,180,9,'F');
-    doc.setFontSize(11);
-    doc.setFont('helvetica','bold');
-    doc.setTextColor(44,31,14);
-    doc.text(titel,20,y+0.5);
-    y += 12;
-  }
-
-  function rij(label, waarde) {
+  // ── Sectiekop ──
+  function sectie(nr, titel) {
+    doc.setFillColor(205,191,160);
+    doc.rect(15,y-5,180,8,'F');
     doc.setFontSize(10);
     doc.setFont('helvetica','bold');
-    doc.setTextColor(107,90,62);
-    doc.text(label,22,y);
-    doc.setFont('helvetica','normal');
     doc.setTextColor(44,31,14);
-    doc.text(waarde||'–',75,y);
-    y += 8;
+    doc.text(`${nr}   ${titel}`,20,y);
+    y += 11;
   }
 
-  sectie('1.  Gegevens werknemer');
-  rij('Naam', naam);
-  rij('BSN', fields.bsn);
-  rij('Geboortedatum', gebDt);
-  rij('Adres', adres);
-
-  y += 4;
-  sectie('2.  Loonheffingskorting');
-  doc.setFontSize(10);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(107,90,62);
-  doc.text('Toepassen bij Snackerie \'t Zonnetje',22,y);
-  doc.setFont('helvetica','bold');
-  doc.setTextColor(lhk ? 4 : 184, lhk ? 120 : 58, lhk ? 87 : 42);
-  doc.text(lhk ? 'Ja' : 'Nee',110,y);
-  y += 8;
-  if (lhk) {
+  // ── Veld met nummer + label + waarde ──
+  function veld(nr, label, waarde) {
+    doc.setFontSize(9);
     doc.setFont('helvetica','bold');
     doc.setTextColor(107,90,62);
-    doc.text('Ingangsdatum',22,y);
+    doc.text(nr,20,y);
+    doc.setFont('helvetica','normal');
+    doc.text(label,27,y);
     doc.setFont('helvetica','normal');
     doc.setTextColor(44,31,14);
-    doc.text(today,75,y);
-    y += 8;
+    doc.text(waarde||'–',95,y);
+    doc.setDrawColor(205,191,160);
+    doc.setLineWidth(0.2);
+    doc.line(95,y+1,195,y+1);
+    y += 9;
   }
 
-  y += 4;
-  sectie('3.  Ondertekening');
-  rij('Datum', today);
-  doc.setFontSize(10);
+  // ── Sectie 1: Uw gegevens ──
+  sectie('1','Uw gegevens');
+  veld('1a','Achternaam en voorletter(s)',`${fields.achternaam}, ${voorletters}`);
+  veld('1b','Burgerservicenummer (bsn)',fields.bsn);
+  veld('1c','Straat en huisnummer',`${fields.straat} ${fields.huisnummer}`);
+  veld('1d','Postcode en woonplaats',`${fields.postcode}  ${fields.woonplaats}`);
+  veld('1e','Land en regio','Nederland');
+  veld('1f','Geboortedatum (dd-mm-jjjj)',gebDt);
+
+  y += 3;
+
+  // ── Sectie 2: Loonheffingskorting ──
+  sectie('2','Loonheffingskorting toepassen');
+
+  // 2a
+  doc.setFontSize(9);
   doc.setFont('helvetica','bold');
   doc.setTextColor(107,90,62);
-  doc.text('Handtekening',22,y);
-  y += 4;
+  doc.text('2a',20,y);
+  doc.setFont('helvetica','normal');
+  doc.text('Loonheffingskorting toepassen bij Snackerie \'t Zonnetje?',27,y);
+  y += 7;
+
+  // Ja-rij
+  doc.setFillColor(lhk ? 29:255, lhk ? 110:255, lhk ? 114:255);
+  doc.rect(30,y-4,4,4, lhk ? 'F':'S');
+  doc.setFont('helvetica', lhk ? 'bold':'normal');
+  doc.setTextColor(44,31,14);
+  doc.text('Ja, toepassen vanaf',37,y);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(lhk ? 44:150, lhk ? 31:150, lhk ? 14:150);
+  doc.text(lhk ? today : '– –',105,y);
+  doc.setDrawColor(205,191,160);
+  doc.setLineWidth(0.2);
+  doc.line(105,y+1,170,y+1);
+  y += 8;
+
+  // Nee-rij
+  doc.setFillColor(!lhk ? 184:255, !lhk ? 58:255, !lhk ? 42:255);
+  doc.rect(30,y-4,4,4, !lhk ? 'F':'S');
+  doc.setFont('helvetica', !lhk ? 'bold':'normal');
+  doc.setTextColor(44,31,14);
+  doc.text('Nee, niet (meer) toepassen vanaf',37,y);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(!lhk ? 44:150, !lhk ? 31:150, !lhk ? 14:150);
+  doc.text(!lhk ? today : '– –',105,y);
+  doc.setLineWidth(0.2);
+  doc.line(105,y+1,170,y+1);
+  y += 11;
+
+  // 2b
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(107,90,62);
+  doc.text('2b',20,y);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(44,31,14);
+  doc.text('Alleenstaande-ouderenkorting toepassen?',27,y);
+  y += 7;
+
+  // Ja
+  doc.setFillColor(aokVal ? 29:255, aokVal ? 110:255, aokVal ? 114:255);
+  doc.rect(30,y-4,4,4, aokVal ? 'F':'S');
+  doc.setFont('helvetica', aokVal ? 'bold':'normal');
+  doc.setTextColor(44,31,14);
+  doc.text('Ja',37,y);
+  y += 7;
+
+  // Nee
+  doc.setFillColor(!aokVal ? 184:255, !aokVal ? 58:255, !aokVal ? 42:255);
+  doc.rect(30,y-4,4,4, !aokVal ? 'F':'S');
+  doc.setFont('helvetica', !aokVal ? 'bold':'normal');
+  doc.text('Nee',37,y);
+  y += 11;
+
+  // ── Sectie 3: Ondertekening ──
+  sectie('3','Ondertekening');
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(107,90,62);
+  doc.text('Datum (dd-mm-jjjj)',20,y);
+  doc.setFont('helvetica','normal');
+  doc.setTextColor(44,31,14);
+  doc.text(today,70,y);
+  doc.setDrawColor(205,191,160);
+  doc.setLineWidth(0.2);
+  doc.line(70,y+1,130,y+1);
+  y += 10;
+
+  doc.setFont('helvetica','bold');
+  doc.setTextColor(107,90,62);
+  doc.text('Handtekening',20,y);
+  doc.setFont('helvetica','italic');
+  doc.setFontSize(8);
+  doc.setTextColor(150,130,100);
+  doc.text('Schrijf binnen het vak.',20,y+5);
+  y += 8;
   doc.setDrawColor(205,191,160);
   doc.setLineWidth(0.4);
-  doc.rect(22,y,90,38);
-  if (sig) doc.addImage(sig,'PNG',22,y,90,38);
-  y += 43;
+  doc.rect(20,y,90,38);
+  if (sig) doc.addImage(sig,'PNG',20,y,90,38);
+  y += 44;
 
-  // Verklaring
-  doc.setFontSize(8);
+  // ── Verklaring ──
+  doc.setFontSize(7.5);
   doc.setTextColor(107,90,62);
   doc.setFont('helvetica','italic');
-  const verk = `Ondergetekende, ${naam}, verklaart hierbij dat bovenstaande gegevens juist en volledig zijn ingevuld. Deze vrije opgaaf is rechtsgeldig als alternatief voor het Belastingdienstmodel (LH 008).`;
+  const verk = `Ondergetekende, ${volledigeNaam}, verklaart hierbij dat bovenstaande gegevens juist en volledig zijn. Deze vrije opgaaf vervangt het Belastingdienstmodel LH 008 en is opgesteld conform artikel 28 Wet op de loonbelasting 1964.`;
   doc.text(doc.splitTextToSize(verk,170),20,y);
 
-  // Footer
+  // ── Footer ──
   doc.setFontSize(7);
   doc.setTextColor(180,160,130);
   doc.setFont('helvetica','normal');
   doc.text(`Aangemaakt op ${today} via het onboardingformulier van Snackerie 't Zonnetje`,105,289,{align:'center'});
 
   // Download
-  const bestandsnaam = `loonheffingsverklaring-${naam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
+  const bestandsnaam = `loonheffingsverklaring-${volledigeNaam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
   doc.save(bestandsnaam);
 
   // Upload naar Supabase Storage
   try {
     const blob = doc.output('blob');
-    const pad  = `loonheffing/${tokenVal}-${naam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
+    const pad  = `loonheffing/${tokenVal}-${volledigeNaam.replace(/\s+/g,'-').toLowerCase()}.pdf`;
     await fetch(`${SB_URL}/storage/v1/object/Documenten/${pad}`,{
       method:'POST',
       headers:{'Authorization':'Bearer '+SB_KEY,'apikey':SB_KEY,'Content-Type':'application/pdf','x-upsert':'true'},
