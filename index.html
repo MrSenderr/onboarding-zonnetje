@@ -680,6 +680,26 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
   const volledigeNaamPost = `${fields.voornaam} ${fields.achternaam}`;
   const loonheffingPdfPad = `loonheffing/${tokenVal}-${volledigeNaamPost.replace(/\s+/g,'-').toLowerCase()}.pdf`;
 
+  // Eerst de verklaring wegschrijven, dan pas versturen. Andersom bleef er bij
+  // een gesloten pagina een pad achter naar een bestand dat er niet is, en dan
+  // ging de verklaring stilletjes niet mee naar het loonbureau.
+  let loonheffingGelukt = false;
+  let loonheffingBlob = null;
+  let loonheffingNaam = null;
+  try {
+    const { blob, bestandsnaam } = await genereerLoonheffingPDF(fields, loonheffing, aok, sigData);
+    loonheffingBlob = blob;
+    loonheffingNaam = bestandsnaam;
+    const up = await fetch(`${SB_URL}/storage/v1/object/Documenten/${loonheffingPdfPad}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + SB_KEY, 'apikey': SB_KEY, 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
+      body: blob,
+    });
+    loonheffingGelukt = up.ok;
+  } catch (e) {
+    loonheffingGelukt = false;
+  }
+
   try {
     const res = await fetch(SUBMIT_URL, {
       method: 'POST',
@@ -692,7 +712,7 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
         geslacht: geslacht,
         id_kopie_url: idKopieUrl,
         id_kopie_achterzijde: idKopieAchterzijdeUrl,
-        loonheffing_pdf: loonheffingPdfPad,
+        loonheffing_pdf: loonheffingGelukt ? loonheffingPdfPad : null,
       }),
     });
     const data = await res.json();
@@ -708,19 +728,14 @@ document.getElementById('onboarding-form').addEventListener('submit', async (e) 
     }
 
     showState('success-state');
-    try {
-      const { blob, bestandsnaam } = await genereerLoonheffingPDF(fields, loonheffing, aok, sigData);
-      await fetch(`${SB_URL}/storage/v1/object/Documenten/${loonheffingPdfPad}`, {
-        method: 'POST',
-        headers: { 'Authorization': 'Bearer ' + SB_KEY, 'apikey': SB_KEY, 'Content-Type': 'application/pdf', 'x-upsert': 'true' },
-        body: blob,
-      });
+
+    // De medewerker houdt zijn eigen exemplaar; dat stond in het blok dat naar
+    // voren is gehaald.
+    if (loonheffingBlob) {
       const dlBtn = document.getElementById('pdf-download-btn');
-      dlBtn.href = URL.createObjectURL(blob);
-      dlBtn.download = bestandsnaam;
+      dlBtn.href = URL.createObjectURL(loonheffingBlob);
+      dlBtn.download = loonheffingNaam;
       document.getElementById('pdf-download-wrap').style.display = '';
-    } catch(pdfErr) {
-      console.warn('[loonheffing] PDF genereren/uploaden mislukt:', pdfErr);
     }
 
   } catch (err) {
